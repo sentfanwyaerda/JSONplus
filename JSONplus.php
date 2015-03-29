@@ -2,10 +2,10 @@
 if(!defined("JSONplus_DATALIST_ROOT")){define("JSONplus_DATALIST_ROOT", dirname(__FILE__).'/');}
 class JSONplus{
 	function get_datalist($datalist){
-		return JSONplus::decode(JSONplus::open_datalist($datalist), TRUE);
+		return JSONplus::decode(JSONplus::open_datalist($datalist, '[]'), TRUE);
 	}
-	function open_datalist($datalist){
-		if(!file_exists(JSONplus_DATALIST_ROOT.$datalist.'.json')){ return FALSE; }
+	function open_datalist($datalist, $errortype=FALSE){
+		if(!file_exists(JSONplus_DATALIST_ROOT.$datalist.'.json')){ return $errortype; }
 		$str = file_get_contents(JSONplus_DATALIST_ROOT.(substr(JSONplus_DATALIST_ROOT, -1) == '/' ? NULL : '/').$datalist.'.json');
 		return $str;
 	}
@@ -13,9 +13,9 @@ class JSONplus{
 		preg_match_all("#(\"[^\"]+\"\s*:\s*)?<datalist:([^>]+)>#i", $json, $buffer);
 		foreach($buffer[0] as $i=>$match){
 			if(strlen($buffer[1][$i]) >= 1){
-				$json = str_replace($buffer[0][$i], $buffer[1][$i].JSONplus::open_datalist($buffer[2][$i]), $json);
+				$json = str_replace($buffer[0][$i], $buffer[1][$i].JSONplus::open_datalist($buffer[2][$i], '[]'), $json);
 			} else {
-				$json = str_replace($buffer[0][$i], preg_replace("#^\s*[\{\[](.*)[\}\]]\s*$#i", "\\1", JSONplus::open_datalist($buffer[2][$i])), $json);
+				$json = str_replace($buffer[0][$i], preg_replace("#^\s*[\{\[](.*)[\}\]]\s*$#i", "\\1", JSONplus::open_datalist($buffer[2][$i], NULL)), $json);
 			}
 		}
 		return $json;
