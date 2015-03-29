@@ -6,7 +6,7 @@ class JSONplus{
 	}
 	function open_datalist($datalist){
 		if(!file_exists(JSONplus_DATALIST_ROOT.$datalist.'.json')){ return FALSE; }
-		$str = file_get_contents(JSONplus_DATALIST_ROOT.$datalist.'.json');
+		$str = file_get_contents(JSONplus_DATALIST_ROOT.(substr(JSONplus_DATALIST_ROOT, -1) == '/' ? NULL : '/').$datalist.'.json');
 		return $str;
 	}
 	function include_all_datalist($json){
