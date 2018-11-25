@@ -1,15 +1,15 @@
 <?php
 if(!defined("JSONplus_DATALIST_ROOT")){define("JSONplus_DATALIST_ROOT", dirname(__FILE__).'/');}
 class JSONplus{
-	function get_datalist($datalist){
+	static function get_datalist($datalist){
 		return JSONplus::decode(JSONplus::open_datalist($datalist, '[]'), TRUE);
 	}
-	function open_datalist($datalist, $errortype=FALSE){
-		if(!file_exists(JSONplus_DATALIST_ROOT.$datalist.'.json')){ return $errortype; }
+	static function open_datalist($datalist, $errortype=FALSE){
+		if(!file_exists(JSONplus_DATALIST_ROOT.(substr(JSONplus_DATALIST_ROOT, -1) == '/' ? NULL : '/').$datalist.'.json')){ return $errortype; }
 		$str = file_get_contents(JSONplus_DATALIST_ROOT.(substr(JSONplus_DATALIST_ROOT, -1) == '/' ? NULL : '/').$datalist.'.json');
 		return $str;
 	}
-	function include_all_datalist($json){
+	static function include_all_datalist($json){
 		preg_match_all("#(\"[^\"]+\"\s*:\s*)?<datalist:([^>]+)>#i", $json, $buffer);
 		foreach($buffer[0] as $i=>$match){
 			if(strlen($buffer[1][$i]) >= 1){
@@ -20,13 +20,13 @@ class JSONplus{
 		}
 		return $json;
 	}
-	function encode($value, $options=0, $depth=512){
+	static function encode($value, $options=0, $depth=512){
 		$str = json_encode($value, $options, $depth);
 		//pretty print (human readable and support for GiT-version management)
 		$str = JSONplus::prettyPrint($str);
 		return $str;
 	}
-	function decode($json, $assoc=FALSE, $depth=512, $options=0){
+	static function decode($json, $assoc=FALSE, $depth=512, $options=0){
 		//proces <datalist:*> before return
 		$json = JSONplus::include_all_datalist($json);
 		if(isset($options) && !($options===0) ) return json_decode($json, $assoc, $depth, $options);
@@ -34,10 +34,10 @@ class JSONplus{
 		if(isset($assoc) && !($assoc===FALSE) ) return json_decode($json, $assoc);
 		return json_decode($json);
 	}
-	function last_error(){
+	static function last_error(){
 		return json_last_error();
 	}
-	function test_string($json){
+	static function test_string($json){
 		$str = NULL;
 		if(!is_array($json)){ $json = array($json); }
 		foreach ($json as $string) {
@@ -74,9 +74,9 @@ class JSONplus{
 		}
 		return $str;
 	}
-	function last_error_msg(){ return json_last_error_msg(); }
+	static function last_error_msg(){ return json_last_error_msg(); }
 	
-	function prettyPrint( $json ){
+	static function prettyPrint( $json ){
 		$result = '';
 		$level = 0;
 		$in_quotes = false;
