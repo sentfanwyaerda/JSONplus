@@ -1,6 +1,8 @@
 <?php
 if(!defined("JSONplus_DATALIST_ROOT")){define("JSONplus_DATALIST_ROOT", dirname(__FILE__).'/');}
 class JSONplus{
+	function __construct(){}
+	function __toString(){ return '[]'; }
 	static function get_datalist($datalist){
 		return JSONplus::decode(JSONplus::open_datalist($datalist, '[]'), TRUE);
 	}
@@ -24,6 +26,7 @@ class JSONplus{
 		$str = json_encode($value, $options, $depth);
 		//pretty print (human readable and support for GiT-version management)
 		$str = JSONplus::prettyPrint($str);
+		/*fix*/ $str = JSONplus::printfixes($str);
 		return $str;
 	}
 	static function decode($json, $assoc=FALSE, $depth=512, $options=0){
@@ -75,7 +78,10 @@ class JSONplus{
 		return $str;
 	}
 	static function last_error_msg(){ return json_last_error_msg(); }
-	
+	static function printfixes($str){
+		$str = str_replace('\/', '/', $str);
+		return $str;
+	}
 	static function prettyPrint( $json ){
 		$result = '';
 		$level = 0;
