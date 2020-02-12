@@ -137,5 +137,34 @@ class JSONplus{
 
 		return $result;
 	}
+	static function import_csv_file($src, $delimiter=",", $enclosure='"', $escape="\\"){
+		return JSONplus::import_csv(file_get_contents($src), $delimiter, $enclosure, $escape);
+	}
+	static function import_csv($str=NULL, $delimiter=",", $enclosure='"', $escape="\\"){
+		$json = array();
+		$firstline = strtok($str, "\n");
+		$head = str_getcsv($firstline, $delimiter, $enclosure, $escape);
+		$c = count($head);
+		$a = $b = 0;
+		//return $head;
+		$original = $str;
+		$str = str_replace('""', '&@quot;', $str);
+		preg_match_all('#["]([^"]+)["]#', $str, $buffer);
+		foreach($buffer[1] as $i=>$j){
+			$str = str_replace('"'.$j.'"', '&@'.$i.';', $str);
+		}
+		$str = str_replace("\n", ",", $str);
+		$db = str_getcsv($str, $delimiter, $enclosure, $escape);
+		foreach($db as $k=>$v){
+			if(!($b == 0 || $k == count($db)-1)){
+				if(preg_match('#^\&\@([0-9]+)\;$#', $v, $z)){ $v = $buffer[1][(int) $z[1]]; }
+				$v = str_replace('&@quot;', '"', $v);
+				$json[$b-1][$head[$a]] = $v;
+			}
+			$a++; if($a>=$c){ $a = 0; $b++; }
+			//if($b >= 2){ return $json; }
+		}
+		return $json;
+	}
 }
 ?>
