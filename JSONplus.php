@@ -188,7 +188,7 @@ class JSONplus{
 		$column = array();
 		$c = 0;
 		foreach($json as $i=>$row){
-			if(!(is_int($i) && $i == $c)){
+			if(is_int($i) && $i == $c){
 				foreach($row as $x=>$cell){
 					if(!in_array($x, $column)){ $column[] = $x; }
 					/*todo: insert into order as data is registered in rows, when new columns were skipped in previous rows*/
@@ -211,6 +211,7 @@ class JSONplus{
 					$row[$i] = (isset($fields[$c]) ? $fields[$c] : NULL);
 				}
 				fputcsv($fp, $row);
+				//*debug*/ fwrite($fp, JSONplus::encode($row)."\r\n");
 			}
 			fseek($fp, 0);
 			while (!feof($fp)) {
