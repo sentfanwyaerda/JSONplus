@@ -166,5 +166,63 @@ class JSONplus{
 		}
 		return $json;
 	}
+	static function is_table($json=array(), $column=array()){
+		$bool = TRUE;
+		$clean_c = (count($column) == 0 ? TRUE : FALSE);
+		$c = 0;
+		foreach($json as $i=>$row){
+			if(!(is_int($i) && $i == $c)){
+				$bool = /*no incremental rows*/ FALSE;
+			}
+			else{
+				foreach($row as $x=>$cell){
+					if($clean_c === TRUE && $i === 0){ $column[] = $x; }
+					if(!in_array($x, $column)){ $bool = /*cell out of bound*/ FALSE; }
+				}
+			}
+			$c++;
+		}
+		return $bool;
+	}
+	static function get_columns($json=array()){
+		$column = array();
+		$c = 0;
+		foreach($json as $i=>$row){
+			if(!(is_int($i) && $i == $c)){
+				foreach($row as $x=>$cell){
+					if(!in_array($x, $column)){ $column[] = $x; }
+					/*todo: insert into order as data is registered in rows, when new columns were skipped in previous rows*/
+				}
+			}
+			$c++;
+		}
+		return $column;
+	}
+	static function export_csv_file($file=FALSE, $json=array(), $column=array()){
+		if(JSONplus::is_table($json, $column)){
+			$csv = NULL;
+			$column = JSONplus::get_columns($json);
+			if(is_bool($file) || $file === NULL){ $fp = tmpfile(); }
+			else{ $fp = fopen($file, 'w+'); }
+			fputcsv($fp, $column);
+			foreach ($json as $fields) {
+				$row = array();
+				foreach($column as $i=>$c){
+					$row[$i] = (isset($fields[$c]) ? $fields[$c] : NULL);
+				}
+				fputcsv($fp, $row);
+			}
+			fseek($fp, 0);
+			while (!feof($fp)) {
+		    $csv .= fread($fp, 1024);
+			}
+			fclose($fp);
+			return $csv;
+		}
+		else { return FALSE; }
+	}
+	static function export_csv($json=array(), $column=array()){
+		return JSONplus::export_csv_file(FALSE, $json, $column);
+	}
 }
 ?>
