@@ -1,5 +1,7 @@
 <?php
 if(!defined("JSONplus_DATALIST_ROOT")){define("JSONplus_DATALIST_ROOT", dirname(__FILE__).'/');}
+if(!defined("JSONplus_FILE_ARGUMENT")){define("JSONplus_FILE_ARGUMENT", 'file');}
+if(!defined("JSONplus_POST_ARGUMENT")){define("JSONplus_POST_ARGUMENT", 'json');}
 class JSONplus{
 	function __construct(){}
 	function __toString(){ return '[]'; }
@@ -225,5 +227,47 @@ class JSONplus{
 	static function export_csv($json=array(), $column=array()){
 		return JSONplus::export_csv_file(FALSE, $json, $column);
 	}
+	static function worker(){
+    $argv_list = array();
+    if($_SERVER['argc'] > 0 && is_array($_SERVER['argv'])){ //case: php -f worker.php a=1 >> $_GET['a'] = 1
+      foreach($_SERVER['argv'] as $i=>$par){
+        if(preg_match('#^([^=]+)[=](.*)$#', $par, $buffer)){ $_GET[$buffer[1]] = $buffer[2]; }
+        else{ $argv_list[$i] = $par; }
+      }
+    }
+
+    if(isset($_GET[JSONplus_FILE_ARGUMENT]) && file_exists($_GET[JSONplus_FILE_ARGUMENT])){ //case: http://../worker.php?file=set.json
+      $json = JSONplus::decode(file_get_contents($_GET[JSONplus_FILE_ARGUMENT]), TRUE);
+    }
+    elseif(isset($argv_list[1]) && file_exists($argv_list[1])){ //case: php -f worker.php set.json
+      $json = JSONplus::decode(file_get_contents($argv_list[1]), TRUE);
+    }
+
+    if(!isset($json)){ //case: cat set.json | php -f worker.php
+      if(defined('STDIN') && php_sapi_name()==="cli"){
+        $input = NULL;
+        $fh = fopen('php://stdin', 'r');
+        $read  = array($fh);
+        $write = NULL;
+        $except = NULL;
+        if ( stream_select( $read, $write, $except, 0 ) === 1 ) {
+            while ($line = fgets( $fh )) {
+                    $input .= $line;
+            }
+        }
+        fclose($fh);
+        $json = JSONplus::decode($input, TRUE);
+      }
+      elseif(isset($_POST) && is_array($_POST) && isset($_POST[JSONplus_POST_ARGUMENT]) && is_string($_POST[JSONplus_POST_ARGUMENT])){ //case: http://../worker.php < $_POST['json']
+        $json = JSONplus::decode($_POST[JSONplus_POST_ARGUMENT], TRUE);
+      }
+      else{
+        //ERROR Message for worker
+        //exit;
+        return FALSE;
+      }
+    }
+    return $json;
+  }
 }
 ?>
