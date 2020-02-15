@@ -227,7 +227,7 @@ class JSONplus{
 	static function export_csv($json=array(), $column=array()){
 		return JSONplus::export_csv_file(FALSE, $json, $column);
 	}
-	static function worker(){
+	static function worker($mode='json'){
     $argv_list = array();
     if($_SERVER['argc'] > 0 && is_array($_SERVER['argv'])){ //case: php -f worker.php a=1 >> $_GET['a'] = 1
       foreach($_SERVER['argv'] as $i=>$par){
@@ -237,13 +237,13 @@ class JSONplus{
     }
 
     if(isset($_GET[JSONplus_FILE_ARGUMENT]) && file_exists($_GET[JSONplus_FILE_ARGUMENT])){ //case: http://../worker.php?file=set.json
-      $json = JSONplus::decode(file_get_contents($_GET[JSONplus_FILE_ARGUMENT]), TRUE);
+			$raw = file_get_contents($_GET[JSONplus_FILE_ARGUMENT]);
     }
     elseif(isset($argv_list[1]) && file_exists($argv_list[1])){ //case: php -f worker.php set.json
-      $json = JSONplus::decode(file_get_contents($argv_list[1]), TRUE);
+			$raw = file_get_contents($argv_list[1]);
     }
 
-    if(!isset($json)){ //case: cat set.json | php -f worker.php
+    if(!isset($raw)){ //case: cat set.json | php -f worker.php
       if(defined('STDIN') && php_sapi_name()==="cli"){
         $input = NULL;
         $fh = fopen('php://stdin', 'r');
@@ -256,10 +256,10 @@ class JSONplus{
             }
         }
         fclose($fh);
-        $json = JSONplus::decode($input, TRUE);
+				$raw = $input;
       }
       elseif(isset($_POST) && is_array($_POST) && isset($_POST[JSONplus_POST_ARGUMENT]) && is_string($_POST[JSONplus_POST_ARGUMENT])){ //case: http://../worker.php < $_POST['json']
-        $json = JSONplus::decode($_POST[JSONplus_POST_ARGUMENT], TRUE);
+				$raw = $_POST[JSONplus_POST_ARGUMENT];
       }
       else{
         //ERROR Message for worker
@@ -267,7 +267,10 @@ class JSONplus{
         return FALSE;
       }
     }
-    return $json;
+		switch(strtolower($mode)){
+			case 'raw': return $raw; break;
+			case 'json': default: return JSONplus::decode($raw, TRUE);
+		}
   }
 }
 ?>
