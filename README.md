@@ -15,3 +15,28 @@ $json  = JSONplus::encode($value);	#json_encode($value);
 ```
 
 **JSONplus** will include the datalist *users* (located at `JSONplus_DATALIST_ROOT/users.json`).
+
+## CSV compatability
+JSONplus can read CSV files, and turn them into JSON-table `[{}]`, and export these tables back to CSV. Use `JSONplus::import_csv`, `JSONplus::import_csv_file`, `JSONplus::export_csv`, `JSONplus::export_csv_file`, `JSONplus::is_table` and `JSONplus::get_columns`.
+
+## JSONplus::worker
+
+A simple worker script can handle several ways of processing a file.
+
+```php
+<?php
+require_once(dirname(__FILE__).'/JSONplus.php');
+$raw = JSONplus::worker('raw'); #string
+/*or*/
+$json = JSONplus::worker('json'); #array
+?>
+```
+
+This code can process:
+```
+php -f worker.php a=1 #results into $_GET['a'] = 1
+php -f worker.php set.json
+cat set.json | php -f worker.php
+http://.../worker.php?file=set.json
+http://.../worker.php #process content of $_POST['json']
+```
