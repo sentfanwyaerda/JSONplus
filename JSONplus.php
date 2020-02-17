@@ -168,36 +168,57 @@ class JSONplus{
 		}
 		return $json;
 	}
-	static function is_table($json=array(), $column=array()){
+	static function is_table($json=array(), $column=array(), $primarykey_depth=-1, $multiple=TRUE, $keys=array(), $autoadd=TRUE){
+		return JSONplus::magical_is_table($json, $column, $primarykey_depth, $multiple, $keys, $autoadd);
+	}
+	static function magical_is_table($json, &$column, $primarykey_depth=-1, $multiple=TRUE, $keys=array(), $autoadd=TRUE){
+		/*fix*/ if($primarykey_depth === -1 && is_array($column) && count($column) > 0){ foreach($column as $i=>$k){ if(is_int($i) && $i < 0){ $primarykey_depth[$i] = $k; } } }
+		/*fix*/ if(is_array($primarykey_depth)){ $keys = $primarykey_depth; $primarykey_depth = count($primarykey_depth); }
+		/*fix*/ $primarykey_depth = (int) $primarykey_depth;
 		$bool = TRUE;
 		$clean_c = (count($column) == 0 ? TRUE : FALSE);
 		$c = 0;
-		foreach($json as $i=>$row){
-			if(!(is_int($i) && $i == $c)){
-				$bool = /*no incremental rows*/ FALSE;
+		if($primarykey_depth > 0){
+			if(isset($keys[-1*$primarykey_depth])){ $column[-1*$primarykey_depth] = $keys[-1*$primarykey_depth]; }
+			elseif(isset($keys[$primarykey_depth])){ $column[-1*$primarykey_depth] = $keys[$primarykey_depth]; }
+			foreach($json as $i=>$row){
+				$nb = JSONplus::magical_is_table($row, $column, ($primarykey_depth-1), $multiple, $keys, $autoadd);
+				$bool = ($bool && $nb);
+			}
+			return $bool;
+		}
+		else{
+			if(!($multiple === TRUE)){
+				if(is_array($json)){
+					foreach($json as $x=>$cell){
+						if(($autoadd === TRUE && !in_array($x, $column)) || ($clean_c === TRUE && $i === 0)){ $column[max(array_keys($culumn))+1] = $x; }
+						if(!in_array($x, $column)){ $bool = /*cell out of bound*/ FALSE; }
+					}
+				}
+				else{
+					return $bool;
+				}
 			}
 			else{
-				foreach($row as $x=>$cell){
-					if($clean_c === TRUE && $i === 0){ $column[] = $x; }
-					if(!in_array($x, $column)){ $bool = /*cell out of bound*/ FALSE; }
+				if(!is_array($json)){ return FALSE; }
+				foreach($json as $i=>$row){
+					if(!(is_int($i) && $i == $c)){
+						$bool = /*no incremental rows*/ FALSE;
+					}
+					else{
+						foreach($row as $x=>$cell){
+							if(($autoadd === TRUE && !in_array($x, $column)) || ($clean_c === TRUE && $i === 0)){ $column[max(array_keys($column))+1] = $x; }
+							if(!in_array($x, $column)){ $bool = /*cell out of bound*/ FALSE; }
+						}
+					}
+					$c++;
 				}
 			}
-			$c++;
+			return $bool;
 		}
-		return $bool;
 	}
-	static function get_columns($json=array()){
-		$column = array();
-		$c = 0;
-		foreach($json as $i=>$row){
-			if(is_int($i) && $i == $c){
-				foreach($row as $x=>$cell){
-					if(!in_array($x, $column)){ $column[] = $x; }
-					/*todo: insert into order as data is registered in rows, when new columns were skipped in previous rows*/
-				}
-			}
-			$c++;
-		}
+	static function get_columns($json=array(), $column=array(), $primarykey_depth=-1, $multiple=TRUE, $keys=array(), $autoadd=TRUE){
+		if(!JSONplus::magical_is_table($json, $column, $primarykey_depth, $multiple, $keys, $autoadd)){ return array(); }
 		return $column;
 	}
 	static function export_csv_file($file=FALSE, $json=array(), $column=array()){
