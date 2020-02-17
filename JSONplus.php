@@ -177,7 +177,6 @@ class JSONplus{
 		/*fix*/ $primarykey_depth = (int) $primarykey_depth;
 		$bool = TRUE;
 		$clean_c = (count($column) == 0 ? TRUE : FALSE);
-		$c = 0;
 		if($primarykey_depth > 0){
 			if(isset($keys[-1*$primarykey_depth])){ $column[-1*$primarykey_depth] = $keys[-1*$primarykey_depth]; }
 			elseif(isset($keys[$primarykey_depth])){ $column[-1*$primarykey_depth] = $keys[$primarykey_depth]; }
@@ -200,6 +199,7 @@ class JSONplus{
 				}
 			}
 			else{
+				$c = 0;
 				if(!is_array($json)){ return FALSE; }
 				foreach($json as $i=>$row){
 					if(!(is_int($i) && $i == $c)){
@@ -221,14 +221,44 @@ class JSONplus{
 		if(!JSONplus::magical_is_table($json, $column, $primarykey_depth, $multiple, $keys, $autoadd)){ return array(); }
 		return $column;
 	}
-	static function export_csv_file($file=FALSE, $json=array(), $column=array()){
-		if(JSONplus::is_table($json, $column)){
+	static function flatten_table($json=array(), $column=array(), $primarykey_depth=-1, $multiple=TRUE, $keys=array(), $autoadd=TRUE, $prefix=array(), $autoempty=FALSE){
+		if(JSONplus::magical_is_table($json, $column, $primarykey_depth, $multiple, $keys, $autoadd)){
+			/*fix*/ if($primarykey_depth === -1 && is_array($column) && count($column) > 0){ foreach($column as $i=>$k){ if(is_int($i) && $i < 0){ $primarykey_depth[$i] = $k; } } }
+			/*fix*/ if(is_array($primarykey_depth)){ $keys = $primarykey_depth; $primarykey_depth = count($primarykey_depth); }
+			/*fix*/ $primarykey_depth = (int) $primarykey_depth;
+			$table = array();
+			if($primarykey_depth > 0){
+				foreach($json as $i=>$set){
+					return JSONplus::flatten_table($set, $column, ($primarykey_depth-1), $multiple, $keys, $autoadd, array_merge($prefix, (isset($column[-1*$primarykey_depth]) ? array($column[-1*$primarykey_depth] => $i) : array() )), $autoempty);
+				}
+			}
+			else{
+				$c = 0;
+				foreach($json as $i=>$row){
+					if(is_int($i) && $i == $c){
+							$current = array();
+							foreach($column as $x=>$y){
+								if(!($autoempty === FALSE) || isset($prefix[$y]) || isset($row[$y])){
+									$current[$y] = (isset($prefix[$y]) ? $prefix[y] : (isset($row[$y]) ? $row[$y] : NULL) );
+								}
+							}
+							$table[] = $current;
+					}
+					$c++;
+				}
+			}
+			return $table;
+		}
+		else FALSE;
+	}
+	static function export_csv_file($file=FALSE, $json=array(), $column=array(), $primarykey_depth=-1, $multiple=TRUE, $keys=array(), $autoadd=TRUE, $prefix=array(), $autoempty=FALSE){
+		if(JSONplus::magical_is_table($json, $column, $primarykey_depth, $multiple, $keys, $autoadd)){
 			$csv = NULL;
-			$column = JSONplus::get_columns($json);
+			$flat = JSONplus::flatten_table($json, $column, $primarykey_depth, $multiple, $keys, $autoadd, $prefix, $autoempty);
 			if(is_bool($file) || $file === NULL){ $fp = tmpfile(); }
 			else{ $fp = fopen($file, 'w+'); }
 			fputcsv($fp, $column);
-			foreach ($json as $fields) {
+			foreach ($flat as $fields) {
 				$row = array();
 				foreach($column as $i=>$c){
 					$row[$i] = (isset($fields[$c]) ? $fields[$c] : NULL);
