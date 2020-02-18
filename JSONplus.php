@@ -177,6 +177,10 @@ class JSONplus{
 		/*fix*/ $primarykey_depth = (int) $primarykey_depth;
 		$bool = TRUE;
 		$clean_c = (count($column) == 0 ? TRUE : FALSE);
+		if($autoadd === TRUE && is_array($keys) && count($keys) > 0){
+			$j = 0;
+			foreach($keys as $i=>$z){ if(is_int($i) && $i < 0){ $column[$i] = $z; } else { $column[--$j] = $z; } }
+		}
 		if($primarykey_depth > 0){
 			if(isset($keys[-1*$primarykey_depth])){ $column[-1*$primarykey_depth] = $keys[-1*$primarykey_depth]; }
 			elseif(isset($keys[$primarykey_depth])){ $column[-1*$primarykey_depth] = $keys[$primarykey_depth]; }
@@ -190,7 +194,7 @@ class JSONplus{
 			if(!($multiple === TRUE)){
 				if(is_array($json)){
 					foreach($json as $x=>$cell){
-						if(($autoadd === TRUE && !in_array($x, $column)) || ($clean_c === TRUE && $i === 0)){ $column[max(array_keys($culumn))+1] = $x; }
+						if(($autoadd === TRUE && !in_array($x, $column)) || ($clean_c === TRUE && $i === 0 && !in_array($x, $column))){ $column[(count($column) > 0 ? max(array_keys($column))+1 : 0)] = $x; }
 						if(!in_array($x, $column)){ $bool = /*cell out of bound*/ FALSE; }
 					}
 				}
@@ -207,7 +211,7 @@ class JSONplus{
 					}
 					else{
 						foreach($row as $x=>$cell){
-							if(($autoadd === TRUE && !in_array($x, $column)) || ($clean_c === TRUE && $i === 0)){ $column[max(array_keys($column))+1] = $x; }
+							if(($autoadd === TRUE && !in_array($x, $column)) || ($clean_c === TRUE && $i === 0 && !in_array($x, $column))){ $column[(count($column) > 0 ? max(array_keys($column))+1 : 0)] = $x; }
 							if(!in_array($x, $column)){ $bool = /*cell out of bound*/ FALSE; }
 						}
 					}
