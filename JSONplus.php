@@ -225,7 +225,7 @@ class JSONplus{
 		if(!JSONplus::magical_is_table($json, $column, $primarykey_depth, $multiple, $keys, $autoadd)){ return array(); }
 		return $column;
 	}
-	static function flatten_cell($cell, $flag=array()){
+	static function flatten_cell($cell, $flag=array(), $mode='json'){
 		/*fix*/ if(!is_array($flag)){ $flag = (!is_bool($flag) ? array($flag) : array()); }
 		if(in_array('multiple', $flag) && is_array($cell)){ $str = NULL; foreach($cell as $c){ $str = ($str === NULL ? NULL : $str."\n").JSONplus::flatten_cell($c, $flag); } $cell = $str; }
 		else{
@@ -240,6 +240,9 @@ class JSONplus{
 					default: /*do nothing*/
 				}
 			}
+		}
+		switch(strtolower($mode)){
+			case 'markdown': $cell = str_replace(array(PHP_EOL, "\n"), array("\\n", "\\n"), $cell); break;
 		}
 		return $cell;
 	}
@@ -347,5 +350,35 @@ class JSONplus{
 			case 'json': default: return JSONplus::decode($raw, TRUE);
 		}
   }
+	static function export_markdown_table($json, $keys=array()){
+		/*static*/ $column = array(); $primarykey_depth = count($keys); $multiple = TRUE; $autoadd = TRUE;
+		$column = JSONplus::get_columns($json, $column, $primarykey_depth, $multiple, $keys, $autoadd);
+		if(JSONplus::is_table($json, $column, $primarykey_depth, $multiple, $keys, $autoadd)){
+			$str = NULL; $line = NULL;
+			foreach($column as $i=>$c){
+				$str .= ($str === NULL ? NULL : "\t").'| '.$c;
+				$line .= ($line === NULL ? NULL : "\t").'| ';
+				switch((isset($datatype[$c]['align']) ? $datatype[$c]['align'] : NULL)){
+					case 'left': $line .= ':----'; break;
+					case 'center': $line .= ':----:'; break;
+					case 'right': $line .= '----:'; break;
+					default: $line .= '----';
+				}
+			}
+			$str .= ' |'.PHP_EOL.$line.' |'.PHP_EOL;
+			$flat = JSONplus::flatten_table($json, $column, $primarykey_depth, $multiple, $keys, $autoadd);
+			foreach($flat as $i=>$row){
+				foreach($column as $x=>$c){
+					$cell = (isset($row[$c]) ? $row[$c] : NULL);
+					$str .= (substr($str, -1*strlen(PHP_EOL)) == PHP_EOL ? NULL : "\t").'| '.JSONplus::flatten_cell($cell, (isset($datatype[$c]) ? $datatype[$c] : array()), 'markdown');
+				}
+				$str .= ' |'.PHP_EOL;
+			}
+			return $str;
+		}
+		else {
+			return FALSE;
+		}
+	}
 }
 ?>
