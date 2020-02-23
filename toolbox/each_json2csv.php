@@ -1,5 +1,6 @@
 <?php
 require_once(dirname(dirname(__FILE__)).'/JSONplus.php');
+require_once(dirname(dirname(__FILE__)).'/JSONplus_schema.php');
 
 /* ls *.json | php -f toolbox/each_json2csv.php base=`pwd` */
 
@@ -21,11 +22,11 @@ foreach($list as $i=>$file){
     $column = array();
     $json = JSONplus::decode(file_get_contents($base.$file), TRUE);
     //print_r($json);
-    $pkf = $base.preg_replace('#\.json$#', '.keys', (preg_match('#[-]#', $file) ? substr($file, (-1*(strlen($file)-strrpos($file, '-'))+1) ) : $file) );
-    if(file_exists($pkf)){ $keys = JSONplus::decode(file_get_contents($pkf), TRUE); } else { $keys = array(); }
+    $pkf = \JSONplus\Schema::find_schema_for($file, $base);
+    if(file_exists($base.$pkf)){ $schema = new \JSONplus\Schema($base.$pkf); $keys = $schema->get_primairykey(TRUE); } else { $keys = array(); }
     /*debug*/ print $pkf.' = '; print_r($keys); print "\n";
     $column = $keys;
-    $primarykey_depth = (is_array($keys) && count($keys) > 0 ? -1*min(array_keys($keys)) : -1 );
+    $primarykey_depth = \JSONplus\Schema::primairykey_depth($keys);
     if($save === TRUE){
       $csv = JSONplus::export_csv_file(preg_replace('#\.json$#', '.csv', $base.$file), $json, $column, $primarykey_depth, $multiple, $keys);
     }
