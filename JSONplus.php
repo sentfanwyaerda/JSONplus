@@ -3,10 +3,22 @@ if(!defined("JSONplus_DATALIST_ROOT")){define("JSONplus_DATALIST_ROOT", dirname(
 if(!defined("JSONplus_FILE_ARGUMENT")){define("JSONplus_FILE_ARGUMENT", 'file');}
 if(!defined("JSONplus_POST_ARGUMENT")){define("JSONplus_POST_ARGUMENT", 'json');}
 class JSONplus{
-	function __construct(){}
-	function __toString(){ return '[]'; }
+	const NOT_FOUND_ERROR = FALSE;
+	const MALFORMED_ERROR = FALSE;
+
+	var $_ = array();
+	function __construct($x=NULL){
+		if($x !== NULL){
+			if(is_string($x)){ $this->_ = \JSONplus::decode($x, TRUE); }
+			else { $this->_ = $x; }
+		}
+	}
+	function __toString(){
+		if(isset($this->_)){ return \JSONplus::encode($this->_); }
+		return '[]';
+	}
 	static function get_datalist($datalist){
-		return JSONplus::decode(JSONplus::open_datalist($datalist, '[]'), TRUE);
+		return \JSONplus::decode(\JSONplus::open_datalist($datalist, '[]'), TRUE);
 	}
 	static function open_datalist($datalist, $errortype=FALSE){
 		if(!file_exists(JSONplus_DATALIST_ROOT.(substr(JSONplus_DATALIST_ROOT, -1) == '/' ? NULL : '/').$datalist.'.json')){ return $errortype; }
@@ -17,9 +29,9 @@ class JSONplus{
 		preg_match_all("#(\"[^\"]+\"\s*:\s*)?<datalist:([^>]+)>#i", $json, $buffer);
 		foreach($buffer[0] as $i=>$match){
 			if(strlen($buffer[1][$i]) >= 1){
-				$json = str_replace($buffer[0][$i], $buffer[1][$i].JSONplus::open_datalist($buffer[2][$i], '[]'), $json);
+				$json = str_replace($buffer[0][$i], $buffer[1][$i].\JSONplus::open_datalist($buffer[2][$i], '[]'), $json);
 			} else {
-				$json = str_replace($buffer[0][$i], preg_replace("#^\s*[\{\[](.*)[\}\]]\s*$#i", "\\1", JSONplus::open_datalist($buffer[2][$i], NULL)), $json);
+				$json = str_replace($buffer[0][$i], preg_replace("#^\s*[\{\[](.*)[\}\]]\s*$#i", "\\1", \JSONplus::open_datalist($buffer[2][$i], NULL)), $json);
 			}
 		}
 		return $json;
@@ -27,20 +39,20 @@ class JSONplus{
 	static function encode($value, $options=0, $depth=512){
 		$str = json_encode($value, $options, $depth);
 		//pretty print (human readable and support for GiT-version management)
-		$str = JSONplus::prettyPrint($str);
-		/*fix*/ $str = JSONplus::printfixes($str);
-		$str = JSONplus::unhide_negative_keys($str);
+		$str = \JSONplus::prettyPrint($str);
+		/*fix*/ $str = \JSONplus::printfixes($str);
+		$str = \JSONplus::unhide_negative_keys($str);
 		return $str;
 	}
 	static function /*json*/ decode($str, $assoc=FALSE, $depth=512, $options=0){
 		//proces <datalist:*> before return
-		$str = JSONplus::include_all_datalist($str);
-		$str = JSONplus::hide_negative_keys($str);
+		$str = \JSONplus::include_all_datalist($str);
+		$str = \JSONplus::hide_negative_keys($str);
 		if(isset($options) && !($options===0) ){ $json = json_decode($str, $assoc, $depth, $options); }
 		elseif(isset($depth) && !($depth===512) ){ $json = json_decode($str, $assoc, $depth); }
 		elseif(isset($assoc) && !($assoc===FALSE) ){ $json = json_decode($str, $assoc); }
 		else{ $json = json_decode($str); }
-		$json = JSONplus::fix_negative_keys($json);
+		$json = \JSONplus::fix_negative_keys($json);
 		return $json;
 	}
 	static function hide_negative_keys($str){
@@ -62,7 +74,7 @@ class JSONplus{
 	static function fix_negative_keys($json=array()){
 		foreach($json as $key=>$val){
 			if(is_string($key) && preg_match('#^[\-]?[0-9]+$#', $key)){ unset($json[$key]); $json[(int) $key] = $json; }
-			if(is_array($val)){ $json[$key] = JSONplus::fix_negative_keys($val); }
+			if(is_array($val)){ $json[$key] = \JSONplus::fix_negative_keys($val); }
 		}
 		return $json;
 	}
@@ -75,10 +87,10 @@ class JSONplus{
 		foreach ($json as $string) {
 			$str .= 'Decoding: ' . $string;
 			//json_decode($string);
-			JSONplus::decode($string);
+			\JSONplus::decode($string);
 
 			//switch (json_last_error()) {
-			switch (JSONplus::last_error()) {
+			switch (\JSONplus::last_error()) {
 				case JSON_ERROR_NONE:
 					$str .= ' - No errors';
 				break;
@@ -166,8 +178,24 @@ class JSONplus{
 
 		return $result;
 	}
+	static function pointer($p, $json=array()){
+		if(is_string($p) && preg_match('#^([^\#]*[\#])?(.*)$#', $p, $buffer)){
+			list($trash, $file, $path) = $buffer;
+			$el = explode('/', $path);
+			if(strlen($file) > 1 && (substr($file, 0, 4) == "http" || file_exists(substr($file, 0, strlen($file)-1)))){
+				$json = \JSONplus::decode(file_get_contents(substr($file, 0, strlen($file)-1)), TRUE);
+			}
+			$current = $json;
+			for($i=(strlen($el[0]) == 0 ? 1 : 0);$i<count($el);$i++){
+				if(isset($current[$el[$i]])){ $current = $current[$el[$i]]; }
+				else { return \JSONplus::NOT_FOUND_ERROR; }
+			}
+			return $current;
+		}
+		else { return \JSONplus::MALFORMED_ERROR; }
+	}
 	static function import_csv_file($src, $delimiter=",", $enclosure='"', $escape="\\"){
-		return JSONplus::import_csv(file_get_contents($src), $delimiter, $enclosure, $escape);
+		return \JSONplus::import_csv(file_get_contents($src), $delimiter, $enclosure, $escape);
 	}
 	static function import_csv($str=NULL, $delimiter=",", $enclosure='"', $escape="\\"){
 		$json = array();
@@ -196,7 +224,7 @@ class JSONplus{
 		return $json;
 	}
 	static function is_table($json=array(), $column=array(), $primarykey_depth=-1, $multiple=TRUE, $keys=array(), $autoadd=TRUE){
-		return JSONplus::magical_is_table($json, $column, $primarykey_depth, $multiple, $keys, $autoadd);
+		return \JSONplus::magical_is_table($json, $column, $primarykey_depth, $multiple, $keys, $autoadd);
 	}
 	static function magical_is_table($json, &$column, $primarykey_depth=-1, $multiple=TRUE, $keys=array(), $autoadd=TRUE){
 		/*fix*/ if($primarykey_depth === -1 && is_array($column) && count($column) > 0){ $primarykey_depth = array(); foreach($column as $i=>$k){ if(is_int($i) && $i < 0){ $primarykey_depth[$i] = $k; } } }
@@ -213,7 +241,7 @@ class JSONplus{
 			elseif(isset($keys[$primarykey_depth])){ $column[-1*$primarykey_depth] = $keys[$primarykey_depth]; }
 			//*debug*/ print_r(array('primarykey_depth' => $primarykey_depth, 'column' => $column));
 			foreach($json as $i=>$row){
-				$nb = JSONplus::magical_is_table($row, $column, ($primarykey_depth - 1), $multiple, $keys, $autoadd);
+				$nb = \JSONplus::magical_is_table($row, $column, ($primarykey_depth - 1), $multiple, $keys, $autoadd);
 				$bool = ($bool && $nb);
 			}
 			return $bool;
@@ -250,12 +278,12 @@ class JSONplus{
 		}
 	}
 	static function get_columns($json=array(), $column=array(), $primarykey_depth=-1, $multiple=TRUE, $keys=array(), $autoadd=TRUE){
-		if(!JSONplus::magical_is_table($json, $column, $primarykey_depth, $multiple, $keys, $autoadd)){ return array(); }
+		if(!\JSONplus::magical_is_table($json, $column, $primarykey_depth, $multiple, $keys, $autoadd)){ return array(); }
 		return $column;
 	}
 	static function flatten_cell($cell, $flag=array(), $mode='json'){
 		/*fix*/ if(!is_array($flag)){ $flag = (!is_bool($flag) ? array($flag) : array()); }
-		if(in_array('multiple', $flag) && is_array($cell)){ $str = NULL; foreach($cell as $c){ $str = ($str === NULL ? NULL : $str."\n").JSONplus::flatten_cell($c, $flag); } $cell = $str; }
+		if(in_array('multiple', $flag) && is_array($cell)){ $str = NULL; foreach($cell as $c){ $str = ($str === NULL ? NULL : $str."\n").\JSONplus::flatten_cell($c, $flag); } $cell = $str; }
 		else{
 			foreach($flag as $el){
 				switch(strtolower($el)){
@@ -275,7 +303,7 @@ class JSONplus{
 		return $cell;
 	}
 	static function flatten_table($json=array(), $column=array(), $primarykey_depth=-1, $multiple=TRUE, $keys=array(), $autoadd=TRUE, $prefix=array(), $autoempty=FALSE){
-		if(JSONplus::magical_is_table($json, $column, $primarykey_depth, $multiple, $keys, $autoadd)){
+		if(\JSONplus::magical_is_table($json, $column, $primarykey_depth, $multiple, $keys, $autoadd)){
 			/*fix*/ if($primarykey_depth === -1 && is_array($column) && count($column) > 0){ foreach($column as $i=>$k){ if(is_int($i) && $i < 0){ $primarykey_depth[$i] = $k; } } }
 			/*fix*/ if(is_array($primarykey_depth)){ $keys = $primarykey_depth; $primarykey_depth = count($primarykey_depth); }
 			/*fix*/ $primarykey_depth = (int) $primarykey_depth;
@@ -283,7 +311,7 @@ class JSONplus{
 			$table = array();
 			if($primarykey_depth > 0){
 				foreach($json as $i=>$set){
-					$table = array_merge($table, JSONplus::flatten_table($set, $column, ($primarykey_depth-1), $multiple, $keys, $autoadd, array_merge($prefix, (isset($column[-1*$primarykey_depth]) ? array($column[-1*$primarykey_depth] => $i) : array(-1*$primarykey_depth => $i) )), $autoempty) );
+					$table = array_merge($table, \JSONplus::flatten_table($set, $column, ($primarykey_depth-1), $multiple, $keys, $autoadd, array_merge($prefix, (isset($column[-1*$primarykey_depth]) ? array($column[-1*$primarykey_depth] => $i) : array(-1*$primarykey_depth => $i) )), $autoempty) );
 				}
 				return $table;
 			}
@@ -323,21 +351,21 @@ class JSONplus{
 	static function export_csv_file($file=FALSE, $json=array(), $column=array(), $primarykey_depth=-1, $multiple=TRUE, $keys=array(), $autoadd=TRUE, $prefix=array(), $autoempty=FALSE, $datatype=array()){
 		/*fix*/ if(is_array($column) && count($column) > 0 && is_array($primarykey_depth)){ $datatype = $primarykey_depth; $primarykey_depth = -1; }
 		/*debug*/ print_r(array('column' => $column, 'primarykey_depth' => $primarykey_depth, 'multiple' => $multiple, 'keys' => $keys, 'autoadd' => $autoadd, 'prefix' => $prefix, 'autoempty' => $autoempty, 'datatype'=>$datatype));
-		$mit = JSONplus::magical_is_table($json, $column, $primarykey_depth, $multiple, $keys, $autoadd);
+		$mit = \JSONplus::magical_is_table($json, $column, $primarykey_depth, $multiple, $keys, $autoadd);
 		/*debug*/ print_r(array('mit' => $mit, 'primarykey_depth' => $primarykey_depth, 'column' => $column));
 		if($mit){
 			$csv = NULL;
-			$flat = JSONplus::flatten_table($json, $column, $primarykey_depth, $multiple, $keys, $autoadd, $prefix, $autoempty);
+			$flat = \JSONplus::flatten_table($json, $column, $primarykey_depth, $multiple, $keys, $autoadd, $prefix, $autoempty);
 			if(is_bool($file) || $file === NULL){ $fp = tmpfile(); }
 			else{ $fp = fopen($file, 'w+'); }
 			fputcsv($fp, $column);
 			foreach ($flat as $fields) {
 				$row = array();
 				foreach($column as $i=>$c){
-					$row[$i] = (isset($fields[$c]) ? JSONplus::flatten_cell($fields[$c], (isset($datatype[$c]) ? $datatype[$c] : array())) : NULL);
+					$row[$i] = (isset($fields[$c]) ? \JSONplus::flatten_cell($fields[$c], (isset($datatype[$c]) ? $datatype[$c] : array())) : NULL);
 				}
 				fputcsv($fp, $row);
-				//*debug*/ fwrite($fp, JSONplus::encode($row)."\r\n");
+				//*debug*/ fwrite($fp, \JSONplus::encode($row)."\r\n");
 			}
 			fseek($fp, 0);
 			while (!feof($fp)) {
@@ -349,7 +377,7 @@ class JSONplus{
 		else { return FALSE; }
 	}
 	static function export_csv($json=array(), $column=array(), $primarykey_depth=-1, $multiple=TRUE, $keys=array(), $autoadd=TRUE, $prefix=array(), $autoempty=FALSE, $datatype=array()){
-		return JSONplus::export_csv_file(FALSE, $json, $column, $primarykey_depth, $multiple, $keys, $autoadd, $prefix, $autoempty, $datatype);
+		return \JSONplus::export_csv_file(FALSE, $json, $column, $primarykey_depth, $multiple, $keys, $autoadd, $prefix, $autoempty, $datatype);
 	}
 	static function worker($mode='json'){
     $argv_list = array();
@@ -393,13 +421,13 @@ class JSONplus{
     }
 		switch(strtolower($mode)){
 			case 'raw': return $raw; break;
-			case 'json': default: return JSONplus::decode($raw, TRUE);
+			case 'json': default: return \JSONplus::decode($raw, TRUE);
 		}
   }
 	static function export_markdown_table($json, $keys=array()){
 		/*static*/ $column = array(); $primarykey_depth = count($keys); $multiple = TRUE; $autoadd = TRUE;
-		$column = JSONplus::get_columns($json, $column, $primarykey_depth, $multiple, $keys, $autoadd);
-		if(JSONplus::is_table($json, $column, $primarykey_depth, $multiple, $keys, $autoadd)){
+		$column = \JSONplus::get_columns($json, $column, $primarykey_depth, $multiple, $keys, $autoadd);
+		if(\JSONplus::is_table($json, $column, $primarykey_depth, $multiple, $keys, $autoadd)){
 			$str = NULL; $line = NULL;
 			foreach($column as $i=>$c){
 				$str .= ($str === NULL ? NULL : "\t").'| '.$c;
@@ -412,11 +440,11 @@ class JSONplus{
 				}
 			}
 			$str .= ' |'.PHP_EOL.$line.' |'.PHP_EOL;
-			$flat = JSONplus::flatten_table($json, $column, $primarykey_depth, $multiple, $keys, $autoadd);
+			$flat = \JSONplus::flatten_table($json, $column, $primarykey_depth, $multiple, $keys, $autoadd);
 			foreach($flat as $i=>$row){
 				foreach($column as $x=>$c){
 					$cell = (isset($row[$c]) ? $row[$c] : NULL);
-					$str .= (substr($str, -1*strlen(PHP_EOL)) == PHP_EOL ? NULL : "\t").'| '.JSONplus::flatten_cell($cell, (isset($datatype[$c]) ? $datatype[$c] : array()), 'markdown');
+					$str .= (substr($str, -1*strlen(PHP_EOL)) == PHP_EOL ? NULL : "\t").'| '.\JSONplus::flatten_cell($cell, (isset($datatype[$c]) ? $datatype[$c] : array()), 'markdown');
 				}
 				$str .= ' |'.PHP_EOL;
 			}
