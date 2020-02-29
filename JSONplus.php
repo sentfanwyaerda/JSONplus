@@ -186,13 +186,59 @@ class JSONplus{
 				$json = \JSONplus::decode(file_get_contents(substr($file, 0, strlen($file)-1)), TRUE);
 			}
 			$current = $json;
-			for($i=(strlen($el[0]) == 0 ? 1 : 0);$i<count($el);$i++){
-				if(isset($current[$el[$i]])){ $current = $current[$el[$i]]; }
-				else { return \JSONplus::NOT_FOUND_ERROR; }
+			for($i=0;$i<count($el);$i++){
+				if($i == 0){
+					if(strlen($el[0]) == 0){ $current = $json; }
+					else{
+						if(isset($this)){ $current = $this->getByID($el[0]); }
+						if(!isset($this) || $current === \JSONplus::NOT_FOUND_ERROR){
+							return \JSONplus::NOT_FOUND_ERROR;
+						}
+					}
+				}
+				else{
+					if(isset($current[$el[$i]])){ $current = $current[$el[$i]]; }
+					else { return \JSONplus::NOT_FOUND_ERROR; }
+				}
 			}
 			return $current;
 		}
 		else { return \JSONplus::MALFORMED_ERROR; }
+	}
+	static function getByID($id, $json=FALSE, $schema=FALSE){
+		$table = \JSONplus::ID_table($json, $schema);
+		if(isset($table[$id])){
+			return \JSONplus::pointer($table[$id], $json);
+		}
+		return \JSONplus::NOT_FOUND_ERROR;
+	}
+	static function ID_crawl($json=array(), $prefix=NULL, $pattern=FALSE, $schema=FALSE){
+		$set = array();
+		/*fix*/ if(strlen($prefix) < 1){ $prefix = '/'; }
+		/*fix*/ if(is_bool($pattern)){ $pattern = array('#^[\$]?id$#i'); }
+		if(FALSE){
+			// $schema tells $prefix should be considered to be an ID by #{basename($prefix)}
+		}
+		foreach($json as $key=>$child){
+			if(is_string($child)){
+				foreach($pattern as $q=>$p){
+					if(/*considered to be an ID*/ preg_match($p, $key) && /*valid ID name*/ preg_match('#^[a-z0-9]$#i', $child)){
+						$set[$child] = $prefix;
+					}
+				}
+			}
+			elseif(is_array($child)){
+				$set = array_merge($set, \JSONplus::ID_crawl($child, (substr($prefix, -1) != '/' ? $prefix.'/' : $prefix).$key, $pattern, $schema));
+			}
+		}
+		return $set;
+	}
+	static function ID_table($json=FALSE, $schema=FALSE){
+		if(is_bool($json)){
+			if(isset($this) && isset($this->_)){ $json = $this->_; }
+			else { return \JSONplus::MALFORMED_ERROR; }
+		}
+		return \JSONplus::ID_crawl($json, NULL, FALSE, $schema);
 	}
 	static function import_csv_file($src, $delimiter=",", $enclosure='"', $escape="\\"){
 		return \JSONplus::import_csv(file_get_contents($src), $delimiter, $enclosure, $escape);
