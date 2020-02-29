@@ -1,29 +1,9 @@
 <?php
 namespace JSONplus;
 require_once(dirname(__FILE__).'/JSONplus.php');
-class Schema {
-  var $file = NULL;
-  private $j = array();
-  function __construct($file=NULL){
-    if($file !== NULL){ $this->open($file); }
-  }
-  function __toString(){
-    return \JSONplus::encode($this->$j);
-  }
-  function open($file){
-    if(file_exists($file)){ $raw = file_get_contents($file); }
-    else { return FALSE; }
-    $this->file = $file;
-    $this->j = \JSONplus::decode($raw, TRUE);
-    return $this->j;
-  }
-  function save($file=NULL){
-    if($file === NULL){ $file = $this->file; }
-    $raw = \JSONplus::encode($this->j);
-    return file_put_contents($file, $raw);
-  }
+class Schema extends \JSONplus {
   function load($schemajson){
-    $this->j = $schemajson;
+    $this->_ = $schemajson;
   }
   function validate($json){
 
@@ -48,10 +28,10 @@ class Schema {
    ***************************************************/
   function /*(array)*/ get_primairykey($extended=FALSE){
     $pk = array();
-    if(isset($this->j['primairykey']) && is_array($this->j['primairykey'])){
+    if(isset($this->_['primairykey']) && is_array($this->_['primairykey'])){
       $c = 0;
-      foreach($this->j['primairykey'] as $i=>$key){
-        $a = ($i == $c ? ((-1*count($this->j['primairykey']))+$i) : $i); $c++;
+      foreach($this->_['primairykey'] as $i=>$key){
+        $a = ($i == $c ? ((-1*count($this->_['primairykey']))+$i) : $i); $c++;
         $pk[$a] = $key;
       }
       if($extended !== FALSE){ if($vn = $this->get_valuename()){
@@ -68,8 +48,8 @@ class Schema {
     return (is_array($keys) && count($keys) > 0 ? -1*min(array_keys($keys)) : -1 );
   }
   function get_valuename(){
-    if(isset($this->j['valuename'])){
-      return $this->j['valuename'];
+    if(isset($this->_['valuename'])){
+      return $this->_['valuename'];
     }
     return FALSE;
   }

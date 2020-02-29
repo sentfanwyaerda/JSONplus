@@ -6,17 +6,40 @@ class JSONplus{
 	const NOT_FOUND_ERROR = FALSE;
 	const MALFORMED_ERROR = FALSE;
 
+	var $uri = FALSE;
 	var $_ = array();
 	function __construct($x=NULL){
 		if($x !== NULL){
-			if(is_string($x)){ $this->_ = \JSONplus::decode($x, TRUE); }
-			else { $this->_ = $x; }
+			if(is_string($x)){
+				if(preg_match('#^\s*[\[\{]#', $x)){
+					$this->_ = \JSONplus::decode($x, TRUE);
+				} elseif(file_exists($x)){
+					$this->open($x);
+				}
+			}
+			elseif(is_array($x)) { $this->_ = $x; }
 		}
 	}
 	function __toString(){
 		if(isset($this->_)){ return \JSONplus::encode($this->_); }
 		return '[]';
 	}
+  function open($file){
+    if(file_exists($file)){ $raw = file_get_contents($file); }
+    else { return FALSE; }
+    $this->uri = $file;
+    $this->load(\JSONplus::decode($raw, TRUE));
+    return $this->_;
+  }
+  function save($file=NULL){
+    if($file === NULL){ $file = $this->uri; }
+		/*fix*/ if(is_bool($file) || strlen($file) < 1){ return \JSONplus::NOT_FOUND_ERROR; }
+    $raw = \JSONplus::encode($this->_);
+    return file_put_contents($file, $raw);
+  }
+  function load($json=array()){
+    $this->j = $json;
+  }
 	static function get_datalist($datalist){
 		return \JSONplus::decode(\JSONplus::open_datalist($datalist, '[]'), TRUE);
 	}
@@ -239,6 +262,20 @@ class JSONplus{
 			else { return \JSONplus::MALFORMED_ERROR; }
 		}
 		return \JSONplus::ID_crawl($json, NULL, FALSE, $schema);
+	}
+	static function get_schema($json=FALSE, $objectify=FALSE){
+		if(is_bool($json)){
+			if(isset($this)){ $json = $this->_; }
+			else{ return \JSONplus::MALFORMED_ERROR; }
+		}
+		if(is_array($json) && isset($json['$schema'])){
+			if($objectify !== FALSE && class_exists('\JSONplus\schema')){
+				$schema = new \JSONplus\schema($json['$schema']);
+				return $schema;
+			}
+			return $json['$schema'];
+		}
+		return \JSONplus::NOT_FOUND_ERROR;
 	}
 	static function import_csv_file($src, $delimiter=",", $enclosure='"', $escape="\\"){
 		return \JSONplus::import_csv(file_get_contents($src), $delimiter, $enclosure, $escape);
