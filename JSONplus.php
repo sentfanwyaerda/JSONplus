@@ -235,7 +235,7 @@ class JSONplus{
 		}
 		return \JSONplus::NOT_FOUND_ERROR;
 	}
-	static function ID_crawl($json=array(), $prefix=NULL, $pattern=FALSE, $schema=FALSE){
+	static function ID_crawl($json=array(), $prefix=NULL, $pattern=FALSE, $schema=FALSE, $allow_multiple=FALSE){
 		$set = array();
 		/*fix*/ if(strlen($prefix) < 1){ $prefix = '/'; }
 		/*fix*/ if(is_bool($pattern)){ $pattern = array('#^[\$]?id$#i'); }
@@ -245,13 +245,16 @@ class JSONplus{
 		foreach($json as $key=>$child){
 			if(is_string($child)){
 				foreach($pattern as $q=>$p){
-					if(/*considered to be an ID*/ preg_match($p, $key) && /*valid ID name*/ preg_match('#^[a-z0-9]$#i', $child)){
-						$set[$child] = $prefix;
+					if(/*considered to be an ID*/ preg_match($p, $key)){
+						//if(/*valid ID name*/ preg_match('#^[a-z0-9]$#i', $child)){
+							if($allow_multiple === TRUE){ $set[] = array('source'=>$child, 'target'=>$prefix); }
+							else { $set[$child] = $prefix; }
+						//} //else {}
 					}
 				}
 			}
 			elseif(is_array($child)){
-				$set = array_merge($set, \JSONplus::ID_crawl($child, (substr($prefix, -1) != '/' ? $prefix.'/' : $prefix).$key, $pattern, $schema));
+				$set = array_merge($set, \JSONplus::ID_crawl($child, (substr($prefix, -1) != '/' ? $prefix.'/' : $prefix).$key, $pattern, $schema, $allow_multiple));
 			}
 		}
 		return $set;
