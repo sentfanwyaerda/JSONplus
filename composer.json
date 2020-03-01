@@ -1,0 +1,17 @@
+{
+    "name": "xltrace/jsonplus",
+    "description": "a way to upgrade JSON with pretty-printing, datalists, negative arrays, import and export to CSV, json-schema, validation, datatypes and pointers",
+    "require": {
+        "php": ">=5.2.4"
+    },
+    "require-dev": {
+        "nette/tester": ">=2.3"
+    },
+    "license": "proprietary",
+    "authors": [
+        {
+            "name": "Sent G. Wierda",
+            "email": "sent@xltrace.nl"
+        }
+    ]
+}
