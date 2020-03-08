@@ -20,7 +20,7 @@ Tester\Environment::setup();
 $jsonfile = __DIR__.'/table.json';
 $raw = file_get_contents($jsonfile);
 
-$schemafile = __DIR__.'/../schema';
+$schemafile = __DIR__.'/../draft-07.schema';
 $sraw = file_get_contents($schemafile);
 
 # Testing JSONplus::decode

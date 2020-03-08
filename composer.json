@@ -7,6 +7,9 @@
     "require-dev": {
         "nette/tester": ">=2.3"
     },
+    "suggest": {
+      "nette/neon": "adds NEON as an JSON-compatible human-readable notation"
+    },
     "license": "proprietary",
     "authors": [
         {

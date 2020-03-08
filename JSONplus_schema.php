@@ -2,25 +2,133 @@
 namespace JSONplus;
 require_once(dirname(__FILE__).'/JSONplus.php');
 class Schema extends \JSONplus {
-  function load($schemajson){
-    $this->_ = $schemajson;
-  }
   function validate($json){
 
   }
 
   static function find_schema_for($file, $base=NULL, $autoload=FALSE, $giveanyway=FALSE){
-    if(file_exists($base.$file)){
+    if(file_exists($base.$file) || $giveanyway === TRUE){
       $pkf = preg_replace('#\.json$#', '.schema', (preg_match('#[-]#', $file) ? substr($file, (-1*(strlen($file)-strrpos($file, '-'))+1) ) : $file) );
       if(file_exists($base.$pkf)){
         if(isset($this) && $autoload === TRUE){ $this->open($pkf); }
         return $pkf;
       }
       else{
-        return ($giveanyway === TRUE ? $pkf : FALSE);
+        return ($giveanyway !== FALSE ? $pkf : FALSE);
       }
     }
     else{ return FALSE; }
+  }
+  static function get_element_definition($key, $schema=FALSE, $subset=FALSE){
+    /*fix*/ if($subset === FALSE){ $subset = array('properties','definitions'); }
+    if($schema === FALSE){
+      if(!isset($this)){ return \JSONplus::MALFORMED_ERROR; }
+      $schema = $this->_;
+    }
+    foreach($subset as $group){
+      $p = \JSONplus::pointer('/'.$group.'/'.$key, $schema);
+      if($p != FALSE){ return $p; }
+    }
+    return \JSONplus::NOT_FOUND_ERROR;
+  }
+  static function element_validate($el, $definition=array()){
+    $bool = TRUE;
+    if(isset($definition['$ref'])){
+      /*fix*/ if(!isset($this)){ return \JSONplus::NOT_FOUND_ERROR; }
+      $definition = $this->pointer($definition['$ref']);
+      /*fix*/ if($definition === \JSONplus::NOT_FOUND_ERROR){ return \JSONplus::NOT_FOUND_ERROR; }
+    }
+    /*fix*/ if(!isset($definition['type'])){ return \JSONplus::MALFORMED_ERROR; }
+    if(is_array($definition['type'])){
+      /*reset*/ $bool = FALSE;
+      foreach($definition['type'] as $k=>$type){
+        switch($k){
+          case 'anyOf': case 'allOf': case 'oneOf': case 'not':
+            //...
+            return \JSONplus::UNSUPPORTED;
+          break;
+          default:
+            if(!is_int($k)){ return \JSONplus::MALFORMED_ERROR; }
+            $bool = ($bool || \JSONplus\schema::element_validate($el, array_merge($definition, array('type' => $type)) ));
+        }
+      }
+    }
+    else{
+      switch(strtolower($definition['type'])){
+        case 'array': return \JSONplus\schema::element_validate_array($el, $definition); break;
+        case 'object': return \JSONplus\schema::element_validate_object($el, $definition); break;
+        case 'string': return \JSONplus\schema::element_validate_string($el, $definition); break;
+        case 'boolean': return \JSONplus\schema::element_validate_boolean($el, $definition); break;
+        case 'integer': return \JSONplus\schema::element_validate_integer($el, $definition); break;
+        case 'number': return \JSONplus\schema::element_validate_number($el, $definition); break;
+        default: return \JSONplus::MALFORMED_ERROR;
+      }
+    }
+    return $bool;
+  }
+  static function element_validate_array($el, $definition=array()){
+    $bool = TRUE;
+    if(!isset($definition['type'])){ return \JSONplus::MALFORMED_ERROR; }
+    if(strtolower($definition['type']) != 'array'){ return \JSONplus::MALFORMED_ERROR; }
+    if(!is_array($el)){ return \JSONplus::INCORRECT; }
+    if(isset($definition['items'])){
+      //...
+    }
+    return $bool;
+  }
+  static function element_validate_object($el, $definition=array()){
+    $bool = TRUE;
+    if(!is_array($el)){ return \JSONplus::INCORRECT; }
+    if(isset($definition['required'])){
+      //...
+    }
+    if(isset($definition['oneOf'])){
+      //...
+    }
+    if(isset($definition['properties'])){
+      //...
+    }
+    if(isset($definition['additionalProperties'])){
+      //...
+    }
+    return $bool;
+  }
+  static function element_validate_string($el, $definition=array()){
+    $bool = is_string($el);
+    if(isset($definition['pattern'])){
+      if(is_array($definition['pattern'])){
+        $pat = FALSE;
+        foreach($definition['pattern'] as $p){
+          $pat = ($pat || preg_match('#'.$p.'#', $el));
+        }
+      }
+      else{ $pat = preg_match('#'.$definition['pattern'].'#', $el); }
+      $bool = ($bool && $pat);
+    }
+    if(isset($definition['format'])){
+      $form = TRUE;
+      switch($definition['format']){
+        case 'uri': break;
+        case 'uri-reference': break;
+        case 'email': break;
+        case 'regex': break;
+        default: return \JSONplus::MALFORMED_ERROR;
+      }
+      $bool = ($bool && $form);
+    }
+    return $bool;
+  }
+  static function element_validate_integer($el, $definition=array()){
+    $bool = is_int($el);
+    return $bool;
+  }
+  static function element_validate_number($el, $definition=array()){
+    $bool = is_int($el);
+    return $bool;
+  }
+  static function element_validate_boolean($el, $definition=array()){
+    $bool = is_bool($el);
+    return $bool;
   }
 
   /****************************************************
