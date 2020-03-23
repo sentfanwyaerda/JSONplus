@@ -10,7 +10,7 @@ if(file_exists(__DIR__ . '/../vendor/autoload.php')){
 }
 # Load the tested class. Composer or your autoloader surely takes
 # care of that in practice.
-require __DIR__ . '/../JSONplus.php';
+require __DIR__ . '/../src/JSONplus_CSV.php';
 
 # Adjust PHP behavior and enable some Tester features (described later)
 Tester\Environment::setup();
@@ -18,5 +18,14 @@ Tester\Environment::setup();
 #------------------------------------------------#
 
 Assert::true(TRUE);
+$uri = __DIR__.'/../bulk/GR2018-partijz.csv';
+$csv = new \JSONplus\CSV($uri);
+
+//print_r_($csv, 'CSV');
+//var_dump($csv);
+
+$json = new \JSONplus\JSON($csv);
+
+//print_r_((string) $json, 'json');
 
 ?>

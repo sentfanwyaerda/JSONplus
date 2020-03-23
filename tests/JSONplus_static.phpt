@@ -10,7 +10,7 @@ if(file_exists(__DIR__ . '/../vendor/autoload.php')){
 }
 # Load the tested class. Composer or your autoloader surely takes
 # care of that in practice.
-require __DIR__ . '/../JSONplus.php';
+require dirname(__DIR__).'/src/JSONplus.php';
 
 # Adjust PHP behavior and enable some Tester features (described later)
 Tester\Environment::setup();
@@ -31,8 +31,8 @@ Assert::same(json_decode($sraw, TRUE), \JSONplus::decode($sraw, TRUE));  # we ex
 Assert::same(json_decode($raw, TRUE), \JSONplus::decode(\JSONplus::encode(\JSONplus::decode($raw, TRUE)),TRUE));  # we expect the same
 Assert::same(json_decode($sraw, TRUE), \JSONplus::decode(\JSONplus::encode(\JSONplus::decode($sraw, TRUE)),TRUE));  # we expect the same
 
-# Testing ID Table
-Assert::same('f09a3e00626b959617dc42bbe268c63e', md5(\JSONplus::encode(\JSONplus::ID_table(\JSONplus::decode($sraw, TRUE)))) );
+# Testing ID Crawl
+Assert::same('f09a3e00626b959617dc42bbe268c63e', md5(\JSONplus::encode(\JSONplus::ID_crawl(\JSONplus::decode($sraw, TRUE)))) );
 
 # Is table
 Assert::true(\JSONplus::is_table(\JSONplus::decode($raw, TRUE)));

@@ -4,10 +4,12 @@
     "require": {
         "php": ">=5.2.4"
     },
-    "require-dev": {
-        "nette/tester": ">=2.3"
+    "autoload": {
+      "classmap": ["src/"]
     },
+    "require-dev": {},
     "suggest": {
+      "nette/tester": "adds testing of scripts by ./tests/ {>=2.3}",
       "nette/neon": "adds NEON as an JSON-compatible human-readable notation"
     },
     "license": "proprietary",
