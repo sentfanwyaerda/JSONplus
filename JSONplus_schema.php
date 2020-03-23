@@ -5,6 +5,10 @@ class Schema extends \JSONplus {
   function validate($json){
 
   }
+  function get_rules(){
+    $rule = new \JSONplus\Schema\Rule($this);
+    return $rule;
+  }
 
   static function find_schema_for($file, $base=NULL, $autoload=FALSE, $giveanyway=FALSE){
     if(file_exists($base.$file) || $giveanyway === TRUE){
@@ -19,17 +23,23 @@ class Schema extends \JSONplus {
     }
     else{ return FALSE; }
   }
-  static function get_element_definition($key, $schema=FALSE, $subset=FALSE){
+  static function static_element_definition($key=NULL, $schema=FALSE, $subset=FALSE){
     /*fix*/ if($subset === FALSE){ $subset = array('properties','definitions'); }
-    if($schema === FALSE){
-      if(!isset($this)){ return \JSONplus::MALFORMED_ERROR; }
-      $schema = $this->_;
-    }
+    if($schema === FALSE){ return \JSONplus::MALFORMED_ERROR; }
+    /*fix*/ if(in_array($key, array(NULL, '/') )){ return \JSONplus::pointer('/', $schema); }
+    /*fix*/ if(substr($key, 0, 1) == '/'){ $key = substr($key, 1); }
     foreach($subset as $group){
       $p = \JSONplus::pointer('/'.$group.'/'.$key, $schema);
       if($p != FALSE){ return $p; }
     }
     return \JSONplus::NOT_FOUND_ERROR;
+  }
+  function get_element_definition($key=NULL, $schema=FALSE, $subset=FALSE){
+    if($schema === FALSE){
+      if(!isset($this)){ return \JSONplus::MALFORMED_ERROR; }
+      $schema = $this->_;
+    }
+    return \JSONplus\Schema::static_element_definition($key, $schema, $subset);
   }
   static function element_validate($el, $definition=array()){
     $bool = TRUE;

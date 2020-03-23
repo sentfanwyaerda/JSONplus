@@ -17,4 +17,22 @@ Tester\Environment::setup();
 
 #------------------------------------------------#
 
+$file = __DIR__.'/../composer.json';
+$composer = new \JSONplus();
+$composer->open($file);
+$raw = file_get_contents($file);
+$json = new \JSONplus($raw);
+
+//print_r($composer);
+//print_r($json);
+
+# TESTS __toString()
+Assert::same(\JSONplus::encode(json_decode($raw, TRUE)), (string) $json);
+Assert::same((string) $composer, (string) $json);
+
+Assert::type('array', $composer->__toArray());
+Assert::notSame(array(), $composer->__toArray());
+
+print_r($json->encode());
+
 ?>

@@ -17,4 +17,6 @@ Tester\Environment::setup();
 
 #------------------------------------------------#
 
+Assert::true(TRUE);
+
 ?>

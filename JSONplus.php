@@ -7,6 +7,13 @@ class JSONplus{
 	const MALFORMED_ERROR = FALSE;
 	const INCORRECT = FALSE;
 	const UNSUPPORTED = FALSE;
+	static function interpret_error($b){
+		if($b === \JSONplus::NOT_FOUND_ERROR){ return 'NOT_FOUND_ERROR'; }
+		elseif($b === \JSONplus::MALFORMED_ERROR){ return 'MALFORMED_ERROR'; }
+		elseif($b === \JSONplus::INCORRECT){ return 'INCORRECT'; }
+		elseif($b === \JSONplus::UNSUPPORTED){ return 'UNSUPPORTED'; }
+		return $b;
+	}
 
 	var $uri = FALSE;
 	var $_ = array();
@@ -26,11 +33,21 @@ class JSONplus{
 		if(isset($this->_)){ return \JSONplus::encode($this->_); }
 		return '[]';
 	}
-  function open($file){
+	public function __toArray(){
+		if(isset($this->_)){ return $this->_; }
+		return array();
+	}
+	static function is_JSONplus($o){
+		return (is_object($o) && in_array(strtolower(get_class($o)), array(strtolower('JSONplus'), strtolower('JSONplus\Schema'))) ? TRUE : FALSE);
+	}
+	static function is_JSONplus_or_array($o){
+		return (\JSONplus::is_JSONplus($o) || is_array($o) ? TRUE : FALSE);
+	}
+  function open($file=NULL){
     if(file_exists($file)){ $raw = file_get_contents($file); }
     else { return FALSE; }
-    $this->uri = $file;
-    $this->load(\JSONplus::decode($raw, TRUE));
+    if($file !== NULL){ $this->uri = $file; }
+    $this->_ = \JSONplus::decode($raw, TRUE);
     return $this->_;
   }
   function save($file=NULL){
@@ -39,8 +56,10 @@ class JSONplus{
     $raw = \JSONplus::encode($this->_);
     return file_put_contents($file, $raw);
   }
-  function load($json=array()){
-    $this->j = $json;
+  static function load($json=array(), $file=NULL){
+		$instance = new \JSONplus($json);
+		$instance->open($file);
+		return $instance;
   }
 	static function get_datalist($datalist){
 		return \JSONplus::decode(\JSONplus::open_datalist($datalist, '[]'), TRUE);
@@ -61,7 +80,15 @@ class JSONplus{
 		}
 		return $json;
 	}
-	static function encode($value, $options=0, $depth=512){
+	public function export($value=\JSONplus::NOT_FOUND_ERROR, $options=0, $depth=512){
+		if($value === \JSONplus::NOT_FOUND_ERROR){ $value = $this->_; }
+		return \JSONplus::encode($value, $options, $depth);
+	}
+	static function encode($value=\JSONplus::NOT_FOUND_ERROR, $options=0, $depth=512){
+		if($value === \JSONplus::NOT_FOUND_ERROR){
+			if(!isset($this)){ return \JSONplus::MALFORMED_ERROR; }
+			$value = $this->_;
+		}
 		$str = json_encode($value, $options, $depth);
 		//pretty print (human readable and support for GiT-version management)
 		$str = \JSONplus::prettyPrint($str);
@@ -204,14 +231,19 @@ class JSONplus{
 
 		return $result;
 	}
+	function getByPath($p, $json=array()){
+	}
 	static function pointer($p, $json=array()){
+		$json = $this->_;
 		if(is_string($p) && preg_match('#^([^\#]*[\#])?(.*)$#', $p, $buffer)){
 			list($trash, $file, $path) = $buffer;
+			/*fix*/ if(substr($file, -1) == '#'){ $file = substr($file, 0, strlen($file)-1); }
 			$el = explode('/', $path);
-			if(strlen($file) > 1 && (substr($file, 0, 4) == "http" || file_exists(substr($file, 0, strlen($file)-1)))){
-				$json = \JSONplus::decode(file_get_contents(substr($file, 0, strlen($file)-1)), TRUE);
+			if(strlen($file) > 1 && (substr($file, 0, 4) == "http" || file_exists($file))){
+				$json = \JSONplus::decode(file_get_contents($file), TRUE);
 			}
 			$current = $json;
+			/*fix*/ if(in_array($path, array(NULL, '/') )){ return $current; }
 			for($i=0;$i<count($el);$i++){
 				if($i == 0){
 					if(strlen($el[0]) == 0){ $current = $json; }
@@ -234,7 +266,7 @@ class JSONplus{
 	static function getByID($id, $json=FALSE, $schema=FALSE){
 		$table = \JSONplus::ID_table($json, $schema);
 		if(isset($table[$id])){
-			return \JSONplus::pointer($table[$id], $json);
+			return \JSONplus::getByPath($table[$id], $json);
 		}
 		return \JSONplus::NOT_FOUND_ERROR;
 	}
