@@ -52,7 +52,7 @@ class JSONplus {
       return $this->_->__toString();
     }
     else {
-      return \JSONplus::encode($this->_);
+			return $this->export();
     }
   }
   public function __toArray(){
