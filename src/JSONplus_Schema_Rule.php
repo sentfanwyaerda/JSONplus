@@ -1,7 +1,7 @@
 <?php
 namespace JSONplus\Schema;
-require_once(dirname(__FILE__).'/JSONplus.php');
-require_once(dirname(__FILE__).'/JSONplus_schema.php');
+require_once(__DIR__.'/JSONplus.php');
+require_once(__DIR__.'/JSONplus_Schema.php');
 class Rule {
   var $schema;
   var $log = array();
